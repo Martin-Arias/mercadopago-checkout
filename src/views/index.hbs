@@ -1,0 +1,112 @@
+<div class="row">
+    <div class="col-md-4 mx-auto">
+        <div class="card">
+            <img src="https://cdn.worldvectorlogo.com/logos/photoshop-cc.svg" alt="" class="card-img-top">
+            <div class="card-body">
+                <h2 class="text-center">$30</h2>
+                <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. Provident culpa illum expedita consectetur
+                    quasi veniam.</p>
+            </div>
+            <div class="card-footer">
+                <form action="/checkout" method="POST">
+                    <script src="https://www.mercadopago.com.ar/integrations/v1/web-tokenize-checkout.js"
+                        data-public-key="TEST-cbed0bf8-0e91-48b3-8cec-44edc4833230" data-transaction-amount="100.00">
+                        </script>
+                    <button class="btn btn-info btn-block mb-2" type="submit">
+                        <i class="fas fa-shopping-cart"></i>
+                    </button>
+
+                </form>
+
+                <button class="btn btn-danger btn-block">
+                    <i class="fas fa-bookmark"></i>
+                </button>
+
+                <img src="https://imgmp.mlstatic.com/org-img/banners/ar/medios/online/575X40.jpg"
+                    title="Mercado Pago - Medios de pago" alt="Mercado Pago - Medios de pago" width="575" height="40" />
+            </div>
+
+        </div>
+    </div>
+</div>
+<script src="https://secure.mlstatic.com/sdk/javascript/v1/mercadopago.js"></script>
+
+<script>
+    window.Mercadopago.setPublishableKey("TEST-cbed0bf8-0e91-48b3-8cec-44edc4833230");
+
+    window.Mercadopago.getIdentificationTypes();
+
+    document.getElementById('cardNumber').addEventListener('keyup', guessPaymentMethod);
+    document.getElementById('cardNumber').addEventListener('change', guessPaymentMethod);
+
+    function guessPaymentMethod(event) {
+        let cardnumber = document.getElementById("cardNumber").value;
+
+        if (cardnumber.length >= 6) {
+            let bin = cardnumber.substring(0, 6);
+            window.Mercadopago.getPaymentMethod({
+                "bin": bin
+            }, setPaymentMethod);
+        }
+    };
+
+    function setPaymentMethod(status, response) {
+        if (status == 200) {
+            let paymentMethodId = response[0].id;
+            let element = document.getElementById('payment_method_id');
+            element.value = paymentMethodId;
+            getInstallments();
+        } else {
+            alert(`payment method info error: ${response}`);
+        }
+    }
+
+    function getInstallments() {
+        window.Mercadopago.getInstallments({
+            "payment_method_id": document.getElementById('payment_method_id').value,
+            "amount": parseFloat(document.getElementById('transaction_amount').value)
+
+        }, function (status, response) {
+            if (status == 200) {
+                document.getElementById('installments').options.length = 0;
+                response[0].payer_costs.forEach(installment => {
+                    let opt = document.createElement('option');
+                    opt.text = installment.recommended_message;
+                    opt.value = installment.installments;
+                    document.getElementById('installments').appendChild(opt);
+                });
+            } else {
+                alert(`installments method info error: ${response}`);
+            }
+        });
+    }
+
+    doSubmit = false;
+    document.querySelector('#pay').addEventListener('submit', doPay);
+
+    function doPay(event) {
+        event.preventDefault();
+        if (!doSubmit) {
+            var $form = document.querySelector('#pay');
+
+            window.Mercadopago.createToken($form, sdkResponseHandler);
+
+            return false;
+        }
+    };
+
+    function sdkResponseHandler(status, response) {
+        if (status != 200 && status != 201) {
+            alert("verify filled data");
+        } else {
+            var form = document.querySelector('#pay');
+            var card = document.createElement('input');
+            card.setAttribute('name', 'token');
+            card.setAttribute('type', 'hidden');
+            card.setAttribute('value', response.id);
+            form.appendChild(card);
+            doSubmit = true;
+            form.submit();
+        }
+    };    
+</script>
